@@ -1,0 +1,225 @@
+---
+title: "Prescribing Information System (1993 – present)"
+toc: true
+toc-depth: 6
+toc-title: "Variable Type"
+code-tools: true
+format: html
+embed-resources: true
+---
+
+```{r}
+#| include: false
+library(tabulizer) # extracts tables from PDFs into dataframes using java
+library(tidyverse) 
+library(pdftools)
+library(glue)
+library(knitr)
+
+# download.file("https://www.isdscotland.org/health-topics/prescribing-and-medicines/Prescribing-Datamarts/docs/PIS_fields_for_researchers_v5_eDRIS%20Guidance.pdf", "pis.pdf", mode = "wb")
+
+#extract table of contents
+pis_toc <- pdf_toc("pis.pdf") 
+
+# extract pdf tables
+pis_tables <- extract_tables("pis.pdf", output = "data.frame")
+
+#function to make r dataframes from extracted pdf tables
+pis <- c(1:5, 7:11, 12, 14, 16:20) %>%
+  map(~data.frame(pis_tables[[.x]]) %>%
+  select(!contains("Request")) %>%  
+  select(!contains("X"))  %>%
+  select(!contains(".")) %>%
+  select(!ends_with("er"))  %>%
+  select(!ends_with("Patient")) %>%  
+  mutate(Name=ifelse(Name=="", NA, Name)) %>%
+  fill(Name) %>%
+  group_by(Name) %>%
+  summarise(across(where(is.character), ~str_flatten(.x, collapse = " "))) %>%
+  filter(!is.na(Name))  
+)  
+
+# To work on the few tables that had notes in the tables and hence were extracted poorly
+
+saveRDS(pis, "pis.RDS")
+
+```
+
+```{r}
+#| eval: false
+#| echo: false
+# run prior to Knit for easy edit 
+as_glue(unlist(pis_toc))
+```
+
+[Source is this PDF from Public Health Scotland](https://www.isdscotland.org/health-topics/prescribing-and-medicines/Prescribing-Datamarts/docs/PIS_fields_for_researchers_v5_eDRIS%20Guidance.pdf)
+
+
+
+#### 1. Prescriber
+
+This class contains information about the prescriber
+
+##### 1.1 Prescriber Location
+
+Details relating to the location where the prescribing took place
+
+```{r}
+#| echo: false
+kable(pis[[1]])
+```
+
+##### 1.2 Prescribing Individual
+
+Details relating to the prescribing individual
+
+```{r}
+#| echo: false
+kable(pis[[2]])
+```
+
+#### 2. Dispenser
+
+This class contains information about the dispenser
+
+##### 2.1 Dispenser Location
+
+Details relating to the location where the dispensing took place
+
+```{r}
+#| echo: false
+kable(pis[[3]])
+```
+
+#### 3. Patient
+
+This class contains information about the patient
+
+##### 3.1 Patient attributes
+
+```{r}
+#| echo: false
+kable(pis[[4]])
+```
+
+#### 4. Geography/Organisation/Deprivation
+
+##### 4.1 Geography
+
+```{r}
+#| echo: false
+kable(pis[[5]])
+```
+
+##### 4.2 NHS Organisation
+
+
+##### 4.3 Deprivation
+
+###### 4.3.1 Scottish Index of Multiple Deprivation (SIMD)
+
+```{r}
+#| echo: false
+kable(pis[[6]])
+```
+
+###### 4.3.2 The Carstairs Deprivation Index
+
+```{r}
+#| echo: false
+kable(pis[[7]])
+```
+
+#### 5. Scanned
+
+This class contains information about prescriptions processed through the paper scanning system by Practitioner Services Division (PSD). This information includes dates, prescribable item details, form type, and quantities
+
+##### 5.1 Prescription Date
+
+```{r}
+#| echo: false
+kable(pis[[8]])
+```
+
+##### 5.2 Prescribable Item
+
+###### 5.2.1 BNF - British National Formulary Drug Codes
+
+```{r}
+#| echo: false
+kable(bind_rows(pis[[9]], pis[[10]]))
+```
+
+###### 5.2.2 Prescribable Item Details
+
+Information relating to the prescribable item
+
+```{r}
+#| echo: false
+kable(pis[[11]])
+```
+
+###### 5.2.3 Indicators
+
+Used to identify prescribable items with specific attributes
+
+
+
+##### 5.3 Form Type
+
+Prescription form types
+
+```{r}
+#| echo: false
+kable(pis[[12]])
+```
+
+
+
+##### 5.4 Exemption Type
+
+Exemption types associated with prescription form
+
+##### 5.5 Prescribed/Dispensed/Paid Items
+
+This class contains measures and flags relating to prescribed, dispensed or paid information
+
+```{r}
+#| echo: false
+kable(bind_rows(pis[[13]], pis[[14]]))
+```
+
+
+#### 6. Prescription Summaries
+
+Details from 1992 until March 2004. Only summaries are available - CHI was not captured in this time period so the data is not linkable.
+
+##### 6.1 Prescription Summaries measures
+
+```{r}
+#| echo: false
+kable(pis[[15]])
+```
+
+
+
+##### 6.2 Prescription Summaries Time objects
+
+```{r}
+#| echo: false
+kable(bind_rows(pis[[16]], pis[[17]]))
+
+```
+
+
+#### 7. Electronic Messaging
+
+This class contains additional information available through electronic messaging (e-messaging)
+
+##### 7.1 e-Prescribed Items - from April 2009 onwards.
+
+Only available where the prescription has an ePrescribed message.
+
+##### 7.2 e-Dispensed Items - from December 2009 onwards.
+
+Only available where the prescription has an eDispensed message.
