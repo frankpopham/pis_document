@@ -24,7 +24,6 @@ pis_toc <- pdf_toc("pis.pdf")
 # extract pdf tables
 pis_tables <- extract_tables("pis.pdf", output = "data.frame")
 
-pis_tables_6 <- extract_tables("pis.pdf", output = "data.frame", pages=7)
 
 
 #function to make r dataframes from extracted pdf tables
@@ -43,14 +42,14 @@ pis <- c(1:5, 7:11, 12, 14, 16:20) %>%
 )  
 
 # To work on the few tables that had notes in the tables and hence were extracted poorly
-pis_tables_6 <- data.frame(pis_tables_6[[1]]) %>%
+pis_6 <- data.frame(pis_tables[[6]]) %>%
   select(1:2) %>%
   filter(!startsWith(Name.Format, "Note"))
 
-pis_tables_6$Name.Format[2] <- 
-  paste(pis_tables_6$Name.Format[2],  pis_tables_6$Name.Format[3])
+pis_6$Name.Format[2] <- 
+  paste(pis_6$Name.Format[2],  pis_6$Name.Format[3])
 
-pis_tables_6 <- pis_tables_6 %>%
+pis_6 <- pis_6 %>%
  filter(!startsWith(Name.Format, "boundary")) %>%
   mutate(Name.Format=ifelse(Name.Format=="", NA, Name.Format)) %>%
   fill(Name.Format) %>%
@@ -59,6 +58,29 @@ pis_tables_6 <- pis_tables_6 %>%
   filter(!is.na(Name.Format)) %>%
   separate(Name.Format, c("Name", "Format"), sep="(?=Text|Nine|Eleven)",
            extra = "merge", fill = "right")
+
+
+pis_21 <- data.frame(pis_tables[[21]]) %>%
+  select(1:2) 
+pis_21$Description.Comment[7] <- 
+  paste(pis_21$Description.Comment[7],  pis_21$Description.Comment[8])
+
+pis_21$Description.Comment[8] <- 
+  paste(pis_21$Description.Comment[7])
+
+pis_21 <- pis_21 %>%
+  separate(Description.Comment, c("Description", "Comment"),
+           sep="(?<=Contains dose,|typed text.)") %>%
+  mutate(Comment = ifelse(is.na(Comment) & Name=="", Description, Comment)) %>%
+  mutate(Description = 
+           if_else(Description==Comment, NA, Description, missing = Description)) %>%
+  mutate(Name=ifelse(Name=="", NA, Name)) %>%
+  fill(Name) %>%
+  group_by(Name) %>%
+  summarise(across(where(is.character), ~str_flatten(.x, collapse = " ", na.rm = TRUE)))
+
+pis_22 <- data.frame(pis_tables[[22]]) %>%
+  select(1:2) 
 
 saveRDS(pis, "pis.RDS")
 
@@ -134,7 +156,7 @@ kable(pis[[5]])
 
 ```{r}
 #| echo: false
-kable(pis_tables_6)
+kable(pis_6)
 ```
 
 ##### 4.3 Deprivation
@@ -242,6 +264,12 @@ This class contains additional information available through electronic messagin
 ##### 7.1 e-Prescribed Items - from April 2009 onwards.
 
 Only available where the prescription has an ePrescribed message.
+
+```{r}
+#| echo: false
+kable(bind_rows(pis_21))
+
+```
 
 ##### 7.2 e-Dispensed Items - from December 2009 onwards.
 
