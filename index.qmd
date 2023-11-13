@@ -24,6 +24,9 @@ pis_toc <- pdf_toc("pis.pdf")
 # extract pdf tables
 pis_tables <- extract_tables("pis.pdf", output = "data.frame")
 
+pis_tables_6 <- extract_tables("pis.pdf", output = "data.frame", pages=7)
+
+
 #function to make r dataframes from extracted pdf tables
 pis <- c(1:5, 7:11, 12, 14, 16:20) %>%
   map(~data.frame(pis_tables[[.x]]) %>%
@@ -40,6 +43,22 @@ pis <- c(1:5, 7:11, 12, 14, 16:20) %>%
 )  
 
 # To work on the few tables that had notes in the tables and hence were extracted poorly
+pis_tables_6 <- data.frame(pis_tables_6[[1]]) %>%
+  select(1:2) %>%
+  filter(!startsWith(Name.Format, "Note"))
+
+pis_tables_6$Name.Format[2] <- 
+  paste(pis_tables_6$Name.Format[2],  pis_tables_6$Name.Format[3])
+
+pis_tables_6 <- pis_tables_6 %>%
+ filter(!startsWith(Name.Format, "boundary")) %>%
+  mutate(Name.Format=ifelse(Name.Format=="", NA, Name.Format)) %>%
+  fill(Name.Format) %>%
+  group_by(Name.Format) %>%
+  summarise(across(where(is.character), ~str_flatten(.x, collapse = " "))) %>%
+  filter(!is.na(Name.Format)) %>%
+  separate(Name.Format, c("Name", "Format"), sep="(?=Text|Nine|Eleven)",
+           extra = "merge", fill = "right")
 
 saveRDS(pis, "pis.RDS")
 
@@ -113,6 +132,10 @@ kable(pis[[5]])
 
 ##### 4.2 NHS Organisation
 
+```{r}
+#| echo: false
+kable(pis_tables_6)
+```
 
 ##### 4.3 Deprivation
 
